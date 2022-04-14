@@ -32,7 +32,7 @@
 #define NRF5340_NET_VFLASH_SECTOR_SZ 2048
 
 #if !MYNEWT_VAL(IPC_NRF5340_PRE_TRUSTZONE_NETCORE_BOOT)
-__attribute__((section(".ipc"))) static struct ipc_shared ipc_shared[1];
+//__attribute__((section(".ipc"))) static struct ipc_shared ipc_shared[1];
 #endif
 
 #define NRF_APP_IPC_NS                  ((NRF_IPC_Type *)0x4002A000)
@@ -226,8 +226,9 @@ nrf5340_net_vflash_init(const struct hal_flash *dev)
     const void *img_addr = (const void *)NRF_APP_IPC_S->GPMEM[0];
     uint32_t image_size = (uint32_t)NRF_APP_IPC_S->GPMEM[1];
 #else
-    const void *img_addr = ipc_shared[0].net_core_image_address;
-    uint32_t image_size = ipc_shared[0].net_core_image_size;
+    // BB TEMP
+    const void *img_addr = 0; // ipc_shared[0].net_core_image_address;
+    uint32_t image_size = 0; //ipc_shared[0].net_core_image_size;
 #endif
 
     /*

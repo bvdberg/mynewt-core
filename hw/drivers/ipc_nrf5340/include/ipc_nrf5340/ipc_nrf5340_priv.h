@@ -31,6 +31,8 @@ extern "C" {
  * Keeps various parameters that otherwise should be configured on
  * both sides.
  */
+
+#if 0
 struct ipc_shared {
     /** NET core embedded image address in application flash */
     void *net_core_image_address;
@@ -50,6 +52,7 @@ struct ipc_shared {
     uint8_t acl_from_ll_count;
 #endif
 };
+#endif
 
 #ifdef __cplusplus
 }

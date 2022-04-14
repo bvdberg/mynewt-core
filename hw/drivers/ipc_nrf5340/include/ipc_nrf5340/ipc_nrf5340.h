@@ -21,6 +21,7 @@
 #define _HW_DRIVERS_IPC_NRF5340_H
 
 #include <stdint.h>
+#include <syscfg/syscfg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,11 +41,8 @@ typedef void (*ipc_nrf5340_recv_cb)(int channel, void *user_data);
  */
 void ipc_nrf5340_init(void);
 
-/**
- * Reset IPC and NetCore. Can be used to re-sync with Network Core without
- * restarting Application Core.
- */
-void ipc_nrf5340_reset(void);
+// BB TEMP
+int ipc_nrf5340_net_online(void);
 
 /**
  * Enable reception on specified IPC channel. Calling with NULL callback
@@ -80,7 +78,8 @@ int ipc_nrf5340_send(int channel, const void *data, uint16_t len);
  *
  * @return            Number of bytes read from IPC
  */
-uint16_t ipc_nrf5340_read(int channel, void *buf, uint16_t len);
+// BB unused
+//uint16_t ipc_nrf5340_read(int channel, void *buf, uint16_t len);
 
 /**
  * Reads data from IPC ring buffer to specified mbuf. Should be used only
@@ -92,7 +91,8 @@ uint16_t ipc_nrf5340_read(int channel, void *buf, uint16_t len);
  *
  * @return            Number of bytes read from IPC.
  */
-uint16_t ipc_nrf5340_read_om(int channel, struct os_mbuf *om, uint16_t len);
+ //BB not used
+//uint16_t ipc_nrf5340_read_om(int channel, struct os_mbuf *om, uint16_t len);
 
 /**
  * Returns number of data bytes available in IPC ring buffer. Should be used
@@ -102,7 +102,8 @@ uint16_t ipc_nrf5340_read_om(int channel, struct os_mbuf *om, uint16_t len);
  *
  * @return            Number of bytes available in IPC ring buffer
  */
-uint16_t ipc_nrf5340_available(int channel);
+ // BB unused
+//uint16_t ipc_nrf5340_available(int channel);
 
 /**
  * Returns number of continuous data bytes available in IPC ring buffer with
@@ -133,7 +134,18 @@ uint16_t ipc_nrf5340_consume(int channel, uint16_t len);
  *
  * @param on_crash - function to be called
  */
+// BB unused
+#if MYNEWT_VAL(MCU_APP_CORE)
 void ipc_nrf5340_set_net_core_restart_cb(void (*on_restart)(void));
+
+/**
+ * Reset IPC and NetCore. Can be used to re-sync with Network Core without
+ * restarting Application Core.
+ */
+// BB Unused
+//void ipc_nrf5340_reset(void);
+
+#endif
 
 #ifdef __cplusplus
 }
