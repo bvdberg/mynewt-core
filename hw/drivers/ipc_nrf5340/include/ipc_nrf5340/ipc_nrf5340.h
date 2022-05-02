@@ -68,6 +68,9 @@ void ipc_nrf5340_recv(int channel, ipc_nrf5340_recv_cb cb, void *user_data);
  */
 int ipc_nrf5340_send(int channel, const void *data, uint16_t len);
 
+// Helper function
+void ipc_nrf5340_send_no_notify(int channel, uint8_t data);
+
 /**
  * Reads data from IPC ring buffer to specified flat buffer. Should be used only
  * from ipc_nrf5340_recv_cb context.
@@ -116,6 +119,10 @@ int ipc_nrf5340_send(int channel, const void *data, uint16_t len);
  */
 uint16_t ipc_nrf5340_available_buf(int channel, void **dptr);
 
+
+// return how much data is available (not just lineair)
+uint16_t ipc_nrf5340_avail(int channel);
+
 /**
  * Consumes data from IPC ring buffer without copying. Should be used only
  * from ipc_nrf5340_recv_cb context.
@@ -126,6 +133,8 @@ uint16_t ipc_nrf5340_available_buf(int channel, void **dptr);
  * @return            Number of bytes consumed from IPC.
  */
 uint16_t ipc_nrf5340_consume(int channel, uint16_t len);
+
+uint16_t ipc_nrf5340_free_space(int channel);
 
 /**
  * Set function to be called when net core restarts.
@@ -146,6 +155,14 @@ void ipc_nrf5340_set_net_core_restart_cb(void (*on_restart)(void));
 //void ipc_nrf5340_reset(void);
 
 #endif
+
+// for LOGGING
+typedef struct {
+    uint8_t chan;
+    uint8_t dlen;
+    uint8_t data[0];
+} log_ipc_hdr_t;
+void ipc_nrf5340_get_log(uint32_t* len, uint8_t** data);
 
 #ifdef __cplusplus
 }

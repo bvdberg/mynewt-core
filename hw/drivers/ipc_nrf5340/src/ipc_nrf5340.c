@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <os/os.h>
 #include <os/os_trace_api.h>
-#include <ipc_nrf5340/ipc_nrf5340_priv.h>
 #include <nrfx_ipc.h>
 #if MYNEWT_VAL(BLE_TRANSPORT_INT_FLOW_CTL)
 #include <nimble/transport.h>
@@ -40,6 +39,7 @@
 
 #define NET_CRASH_CHANNEL 2
 #define IPC_IRQ_PRIORITY  5
+#define LOG_IPC
 
 typedef enum {
     APP_WAITS_FOR_NET,
@@ -54,7 +54,15 @@ typedef struct {
 #endif
     ringbuf_lf ring[IPC_MAX_CHANS];
     char ring_data[IPC_MAX_CHANS][IPC_BUF_SIZE];
+
+#ifdef LOG_IPC
+    uint8_t notify[IPC_MAX_CHANS];
+    uint8_t notify_data[IPC_MAX_CHANS];
+    uint32_t log_idx;
+    uint8_t log_buf[2048];
+#endif
 } SharedMemory;
+
 
 static SharedMemory mem[1] __attribute__((section(".ipc")));
 
@@ -175,6 +183,28 @@ void ipc_nrf5340_recv(int channel, ipc_nrf5340_recv_cb cb, void *user_data) {
 
 int ipc_nrf5340_send(int channel, const void *data, uint16_t len) {
     ringbuf_lf* ring = &mem->ring[channel];
+#ifdef LOG_IPC
+    if (channel != 3) {
+        // TODO locking
+        uint32_t log_idx = mem->log_idx;
+        uint32_t req_len = len + sizeof(log_ipc_hdr_t);
+        if (mem->notify[channel]) req_len++;
+        if (log_idx + req_len < 2048) { // otherwise drop
+            mem->log_idx += req_len;
+            log_ipc_hdr_t* hdr = (log_ipc_hdr_t*)&mem->log_buf[log_idx];
+            hdr->chan = channel;
+            hdr->dlen = len;
+            if (mem->notify[channel]) {
+                hdr->data[0] = mem->notify_data[channel];
+                memcpy(hdr->data+1, data, len);
+                hdr->dlen++;
+                mem->notify[channel] = 0;
+            } else {
+                memcpy(hdr->data, data, len);
+            }
+        }
+    }
+#endif
     while (len) {
         uint32_t avail = ringbuf_lf_get_free(ring);
         if (avail < 64) continue;   // blocking wait
@@ -186,6 +216,31 @@ int ipc_nrf5340_send(int channel, const void *data, uint16_t len) {
         NRF_IPC->TASKS_SEND[channel] = 1;
     }
     return 0;
+}
+
+void ipc_nrf5340_send_no_notify(int channel, uint8_t data) {
+    ringbuf_lf* ring = &mem->ring[channel];
+#ifdef LOG_IPC
+    if (channel != 3) {
+        // just store single byte
+        mem->notify[channel] = 1;
+        mem->notify_data[channel] = data;
+    }
+#endif
+    // TODO can simplify
+    uint16_t len = 1;
+    while (len) {
+        uint32_t avail = ringbuf_lf_get_free(ring);
+        if (avail < 64) {
+            NRF_IPC->TASKS_SEND[channel] = 1;
+            continue;   // blocking wait
+        }
+
+        uint32_t block = min(len, avail);
+        uint32_t inserted = ringbuf_lf_add(ring, &data, block);
+        len -= inserted;
+        data += inserted;
+    }
 }
 
 uint16_t ipc_nrf5340_available_buf(int channel, void **dptr) {
@@ -202,9 +257,16 @@ uint16_t ipc_nrf5340_available_buf(int channel, void **dptr) {
     return rb->bufsize - tail;  // only unwrapped part
 }
 
+uint16_t ipc_nrf5340_avail(int channel) {
+    return ringbuf_lf_get_count(&mem->ring[channel]);
+}
+
 uint16_t ipc_nrf5340_consume(int channel, uint16_t len) {
-    ringbuf_lf* rb = &mem->ring[channel];
-    return ringbuf_lf_consume(rb, len);
+    return ringbuf_lf_consume(&mem->ring[channel], len);
+}
+
+uint16_t ipc_nrf5340_free_space(int channel) {
+    return ringbuf_lf_get_free(&mem->ring[channel]);
 }
 
 #if MYNEWT_VAL(BLE_TRANSPORT_INT_FLOW_CTL)
@@ -246,3 +308,7 @@ ble_transport_int_flow_ctl_put(void)
 
 #endif
 
+void ipc_nrf5340_get_log(uint32_t* len, uint8_t** data) {
+    *len = mem->log_idx;
+    *data = mem->log_buf;
+}
