@@ -39,7 +39,7 @@
 
 #define NET_CRASH_CHANNEL 2
 #define IPC_IRQ_PRIORITY  5
-#define LOG_IPC
+//#define LOG_IPC
 
 typedef enum {
     APP_WAITS_FOR_NET,
@@ -309,6 +309,11 @@ ble_transport_int_flow_ctl_put(void)
 #endif
 
 void ipc_nrf5340_get_log(uint32_t* len, uint8_t** data) {
+#ifdef LOG_IPC
     *len = mem->log_idx;
     *data = mem->log_buf;
+#else
+    *len = 0;
+    *data = NULL;
+#endif
 }
